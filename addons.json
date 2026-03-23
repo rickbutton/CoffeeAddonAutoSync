@@ -7,16 +7,16 @@
       "assetPattern": "^BigWigs-v[\\d.]+\\.zip$"
     },
     {
-      "name": "LittleWigs",
+      "name": "NorthernSkyRaidTools",
       "source": "github",
-      "repo": "BigWigsMods/LittleWigs",
-      "assetPattern": "^LittleWigs-v[\\d.]+\\.zip$"
+      "repo": "Reloe/NorthernSkyRaidTools",
+      "assetPattern": "^NorthernSkyRaidTools-[\\d.]+\\.zip$"
     },
     {
-      "name": "WeakAuras",
+      "name": "RCLootCouncil",
       "source": "github",
-      "repo": "WeakAuras/WeakAuras2",
-      "assetPattern": "WeakAuras.*\\.zip$"
+      "repo": "evil-morfar/RCLootCouncil2",
+      "assetPattern": "^RCLootCouncil2-[\\d.]+\\.zip$"
     }
   ]
 }
