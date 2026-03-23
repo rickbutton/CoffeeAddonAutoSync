@@ -119,9 +119,8 @@ async function processZip(zipPath) {
     const zip = await JSZip.loadAsync(data);
 
     let tocCount = 0;
-    let luaMarked = false;
 
-    // collect top-level addon directories so we can add .git markers
+    // collect top-level addon directories so we can apply per-folder processing
     const topLevelDirs = new Set();
 
     for (const [filePath, file] of Object.entries(zip.files)) {
@@ -142,16 +141,27 @@ async function processZip(zipPath) {
             }
             tocCount++;
         }
+    }
 
-        // inject fingerprint marker into the first .lua file we find at the
-        // shallowest depth to break CurseForge's MurmurHash2 fingerprint match
-        if (!luaMarked && filePath.endsWith(".lua")) {
+    // inject fingerprint marker into the first .lua file in each top-level
+    // addon folder to break CurseForge's MurmurHash2 fingerprint match
+    for (const dir of topLevelDirs) {
+        let marked = false;
+        for (const [filePath, file] of Object.entries(zip.files)) {
+            if (file.dir) continue;
+            if (!filePath.startsWith(dir + "/")) continue;
+            if (!filePath.endsWith(".lua")) continue;
+
             const content = await file.async("string");
             if (!content.startsWith(FINGERPRINT_MARKER)) {
                 zip.file(filePath, FINGERPRINT_MARKER + content);
                 console.log(`  injected fingerprint marker into ${filePath}`);
-                luaMarked = true;
             }
+            marked = true;
+            break;
+        }
+        if (!marked) {
+            console.log(`  warning: no .lua file found in ${dir}/ to inject fingerprint marker`);
         }
     }
 
