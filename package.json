@@ -1,0 +1,11 @@
+{
+  "name": "coffee-addon-auto-sync",
+  "private": true,
+  "scripts": {
+    "sync": "node scripts/sync-addons.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1009.0",
+    "dotenv": "^17.3.1"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "addons": [
+    {
+      "name": "BigWigs",
+      "source": "github",
+      "repo": "BigWigsMods/BigWigs",
+      "assetPattern": "^BigWigs-v[\\d.]+\\.zip$"
+    },
+    {
+      "name": "LittleWigs",
+      "source": "github",
+      "repo": "BigWigsMods/LittleWigs",
+      "assetPattern": "^LittleWigs-v[\\d.]+\\.zip$"
+    },
+    {
+      "name": "WeakAuras",
+      "source": "github",
+      "repo": "WeakAuras/WeakAuras2",
+      "assetPattern": "WeakAuras.*\\.zip$"
+    }
+  ]
+}
