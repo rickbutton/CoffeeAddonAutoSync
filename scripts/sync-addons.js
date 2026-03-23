@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const https = require("https");
 const { S3 } = require("@aws-sdk/client-s3");
+const JSZip = require("jszip");
 
 const {
     BUCKET_ENDPOINT,
@@ -92,6 +93,70 @@ async function uploadFile(localPath, remotePath, contentType) {
     console.log("uploaded file:", remotePath);
 }
 
+const PROVIDER_ID_FIELDS = [
+    "X-Curse-Project-ID",
+    "X-Wago-ID",
+    "X-WoWI-ID",
+    "X-Tukui-ProjectID",
+    "X-Tukui-ProjectFolders",
+];
+
+const FINGERPRINT_MARKER = "-- CoffeeAddonSync managed\n";
+
+function stripProviderIds(tocContent) {
+    const lines = tocContent.split("\n");
+    const filtered = lines.filter((line) => {
+        const trimmed = line.trim();
+        return !PROVIDER_ID_FIELDS.some((field) =>
+            trimmed.toLowerCase().startsWith(`## ${field.toLowerCase()}:`)
+        );
+    });
+    return filtered.join("\n");
+}
+
+async function processZip(zipPath) {
+    const data = fs.readFileSync(zipPath);
+    const zip = await JSZip.loadAsync(data);
+
+    let tocCount = 0;
+    let luaMarked = false;
+
+    for (const [filePath, file] of Object.entries(zip.files)) {
+        if (file.dir) continue;
+
+        if (filePath.endsWith(".toc")) {
+            const content = await file.async("string");
+            const stripped = stripProviderIds(content);
+            if (content !== stripped) {
+                zip.file(filePath, stripped);
+                console.log(`  stripped provider IDs from ${filePath}`);
+            }
+            tocCount++;
+        }
+
+        // inject fingerprint marker into the first .lua file we find at the
+        // shallowest depth to break CurseForge's MurmurHash2 fingerprint match
+        if (!luaMarked && filePath.endsWith(".lua")) {
+            const content = await file.async("string");
+            if (!content.startsWith(FINGERPRINT_MARKER)) {
+                zip.file(filePath, FINGERPRINT_MARKER + content);
+                console.log(`  injected fingerprint marker into ${filePath}`);
+                luaMarked = true;
+            }
+        }
+    }
+
+    console.log(`  processed ${tocCount} .toc file(s)`);
+
+    const processed = await zip.generateAsync({
+        type: "nodebuffer",
+        compression: "DEFLATE",
+        compressionOptions: { level: 9 },
+    });
+    fs.writeFileSync(zipPath, processed);
+    console.log(`  rewrote ${zipPath} (${processed.length} bytes)`);
+}
+
 async function syncGithubAddon(addon) {
     console.log(`\n--- syncing ${addon.name} from github:${addon.repo} ---`);
 
@@ -114,6 +179,8 @@ async function syncGithubAddon(addon) {
     if (!fs.existsSync(localPath)) {
         console.log(`downloading ${asset.name}...`);
         await downloadFile(asset.browser_download_url, localPath);
+        console.log(`processing zip to strip addon manager metadata...`);
+        await processZip(localPath);
     } else {
         console.log(`already downloaded: ${localPath}`);
     }
