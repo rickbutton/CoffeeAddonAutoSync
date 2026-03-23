@@ -121,7 +121,16 @@ async function processZip(zipPath) {
     let tocCount = 0;
     let luaMarked = false;
 
+    // collect top-level addon directories so we can add .git markers
+    const topLevelDirs = new Set();
+
     for (const [filePath, file] of Object.entries(zip.files)) {
+        // track top-level directories (e.g. "BigWigs_Core/" from "BigWigs_Core/foo.lua")
+        const firstSlash = filePath.indexOf("/");
+        if (firstSlash > 0) {
+            topLevelDirs.add(filePath.substring(0, firstSlash));
+        }
+
         if (file.dir) continue;
 
         if (filePath.endsWith(".toc")) {
@@ -146,7 +155,14 @@ async function processZip(zipPath) {
         }
     }
 
-    console.log(`  processed ${tocCount} .toc file(s)`);
+    // add empty .git directory to each top-level addon folder so WowUp
+    // treats them as development addons and skips them during scanning
+    for (const dir of topLevelDirs) {
+        zip.file(`${dir}/.git/config`, "");
+        console.log(`  added .git marker to ${dir}/`);
+    }
+
+    console.log(`  processed ${tocCount} .toc file(s), ${topLevelDirs.size} addon folder(s)`);
 
     const processed = await zip.generateAsync({
         type: "nodebuffer",
